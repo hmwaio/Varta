@@ -1,0 +1,19 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: varta-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hmwaio
+      POSTGRES_PASSWORD: Hmwaio123
+      POSTGRES_DB: varta_pg_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+    name: varta_backend_postgres_data

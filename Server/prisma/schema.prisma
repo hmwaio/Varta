@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AuthSession {
+  authsession_id String   @id @default(uuid())
+  email          String   @unique
+  otp            String
+  otp_expires_at DateTime
+  is_verified    Boolean  @default(false)
+  created_at     DateTime @default(now())
+
+  @@index([email])
+}
+
+model MagicToken {
+  token_id   String   @id @default(uuid())
+  email      String
+  token      String   @unique
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  @@index([email])
+}
+
+model User {
+  user_id     String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String
+  username    String   @unique
+  is_verified Boolean  @default(false)
+  profile     Profile?
+  created_at  DateTime @default(now())
+
+  // Connection relations
+  sent_connections     Connection[]        @relation("SentConnections")
+  received_connections Connection[]        @relation("ReceivedConnections")
+  sent_requests        ConnectionRequest[] @relation("SentRequests")
+  received_requests    ConnectionRequest[] @relation("ReceivedRequests")
+
+  @@index([username])
+}
+
+model Profile {
+  profile_id         String  @id @default(uuid())
+  bio                String?
+  profile_picture    String?
+  profile_picture_id String?
+  user               User    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user_id            String  @unique
+}
+
+model Connection {
+  connection_id String           @id @default(uuid())
+  sender_id     String
+  receiver_id   String
+  status        ConnectionStatus @default(PENDING)
+  created_at    DateTime         @default(now())
+  updated_at    DateTime         @updatedAt
+
+  sender   User @relation("SentConnections", fields: [sender_id], references: [user_id], onDelete: Cascade)
+  receiver User @relation("ReceivedConnections", fields: [receiver_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([sender_id, receiver_id])
+  @@index([receiver_id])
+  @@index([status])
+}
+
+model ConnectionRequest {
+  request_id    String   @id @default(uuid())
+  sender_id     String
+  receiver_id   String
+  intro_message String?  @db.VarChar(200)
+  created_at    DateTime @default(now())
+
+  sender   User @relation("SentRequests", fields: [sender_id], references: [user_id], onDelete: Cascade)
+  receiver User @relation("ReceivedRequests", fields: [receiver_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([sender_id, receiver_id])
+  @@index([receiver_id])
+}
+
+enum ConnectionStatus {
+  PENDING
+  CONNECTED
+  BLOCKED
+}

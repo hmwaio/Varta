@@ -30,20 +30,31 @@ model MagicToken {
 }
 
 model User {
-  user_id     String   @id @default(uuid())
-  email       String   @unique
+  user_id     String    @id @default(uuid())
+  email       String    @unique
   password    String
   name        String
-  username    String   @unique
-  is_verified Boolean  @default(false)
+  username    String    @unique
+  is_verified Boolean   @default(false)
+  is_deleted  Boolean   @default(false)
+  deleted_at  DateTime?
   profile     Profile?
-  created_at  DateTime @default(now())
+  created_at  DateTime  @default(now())
 
   // Connection relations
   sent_connections     Connection[]        @relation("SentConnections")
   received_connections Connection[]        @relation("ReceivedConnections")
   sent_requests        ConnectionRequest[] @relation("SentRequests")
   received_requests    ConnectionRequest[] @relation("ReceivedRequests")
+
+  // Chat relations
+  conversations         ConversationMember[]
+  sent_messages         Message[]            @relation("SentMessages")
+  message_reads         MessageRead[]
+  created_conversations Conversation[]       @relation("CreatedConversations")
+
+  made_calls     Call[] @relation("MadeCalls")
+  received_calls Call[] @relation("ReceivedCalls")
 
   @@index([username])
 }
@@ -91,4 +102,110 @@ enum ConnectionStatus {
   PENDING
   CONNECTED
   BLOCKED
+}
+
+model Conversation {
+  conversation_id String           @id @default(uuid())
+  type            ConversationType @default(DIRECT)
+  name            String?
+  is_request      Boolean          @default(false)
+  created_by      String
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+
+  creator      User                 @relation("CreatedConversations", fields: [created_by], references: [user_id])
+  participants ConversationMember[]
+  messages     Message[]
+
+  @@index([created_by])
+}
+
+model ConversationMember {
+  member_id       String   @id @default(uuid())
+  conversation_id String
+  user_id         String
+  joined_at       DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversation_id], references: [conversation_id], onDelete: NoAction)
+  user         User         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([conversation_id, user_id])
+  @@index([user_id])
+}
+
+model Message {
+  message_id      String      @id @default(uuid())
+  conversation_id String
+  sender_id       String
+  sender_name     String
+  sender_picture  String?
+  content         String?
+  type            MessageType @default(TEXT)
+  file_url        String?
+  reply_to_id     String?
+  is_deleted      Boolean     @default(false)
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+
+  conversation Conversation  @relation(fields: [conversation_id], references: [conversation_id], onDelete: NoAction)
+  sender       User          @relation("SentMessages", fields: [sender_id], references: [user_id], onDelete: NoAction)
+  reply_to     Message?      @relation("Replies", fields: [reply_to_id], references: [message_id])
+  replies      Message[]     @relation("Replies")
+  read_by      MessageRead[]
+
+  @@unique([created_at, message_id], name: "created_at_message_id")
+  @@index([conversation_id, created_at])
+  @@index([sender_id])
+}
+
+model MessageRead {
+  read_id    String   @id @default(uuid())
+  message_id String
+  user_id    String
+  read_at    DateTime @default(now())
+
+  message Message @relation(fields: [message_id], references: [message_id], onDelete: NoAction)
+  user    User    @relation(fields: [user_id], references: [user_id], onDelete: NoAction)
+
+  @@unique([message_id, user_id])
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  VOICE
+  VIDEO
+}
+
+model Call {
+  call_id     String     @id @default(uuid())
+  caller_id   String
+  receiver_id String
+  type        CallType   @default(AUDIO)
+  status      CallStatus @default(MISSED)
+  started_at  DateTime   @default(now())
+  ended_at    DateTime?
+
+  caller   User @relation("MadeCalls", fields: [caller_id], references: [user_id], onDelete: NoAction)
+  receiver User @relation("ReceivedCalls", fields: [receiver_id], references: [user_id], onDelete: NoAction)
+
+  @@index([caller_id])
+  @@index([receiver_id])
+}
+
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum CallStatus {
+  MISSED
+  ANSWERED
+  DECLINED
 }

@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.lib.js";
+import { resolveUserId } from "../../utils/resolveUser.js";
 
 type SendRequestData = {
   senderId: string;
@@ -6,12 +7,11 @@ type SendRequestData = {
   introMessage?: string;
 };
 export const sendRequest = async (data: SendRequestData) => {
-  const { senderId, receiverId, introMessage } = data;
+  const { senderId, introMessage } = data;
+  const receiverId = await resolveUserId(data.receiverId);
 
   // Can't send to yourself
-  if (senderId === receiverId) {
-    throw new Error("You can't send a request to yourself");
-  }
+  if (senderId === receiverId) throw new Error("You can't send a request to yourself");
 
   /* Check receiver exist */
   const receiver = await prisma.user.findUnique({
@@ -46,7 +46,7 @@ export const sendRequest = async (data: SendRequestData) => {
     data: {
       sender_id: senderId,
       receiver_id: receiverId,
-      intro_message: introMessage,
+      intro_message: introMessage ?? null,
     },
   });
 

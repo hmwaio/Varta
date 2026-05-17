@@ -1,15 +1,22 @@
 import { prisma } from "../../lib/prisma.lib.js";
+import { resolveUserId } from "../../utils/resolveUser.js";
 
 type AcceptRequestData = {
-  requestId: string;
+  senderId: string;
   receiverId: string;
 };
 
 export const acceptRequest = async (data: AcceptRequestData) => {
-  const { requestId, receiverId } = data;
+  const senderId = await resolveUserId(data.senderId);
+  const receiverId = await resolveUserId(data.receiverId);
 
   const request = await prisma.connectionRequest.findUnique({
-    where: { request_id: requestId },
+    where: {
+      sender_id_receiver_id: {
+        sender_id: senderId,
+        receiver_id: receiverId,
+      },
+    },
   });
 
   if (!request) throw new Error("Request not found");
@@ -25,8 +32,27 @@ export const acceptRequest = async (data: AcceptRequestData) => {
         status: "CONNECTED",
       },
     }),
-    prisma.connectionRequest.delete({ where: { request_id: requestId } }),
+    prisma.connectionRequest.delete({
+      where: {
+        sender_id_receiver_id: {
+          sender_id: senderId,
+          receiver_id: receiverId,
+        },
+      },
+    }),
+    // Update conversation is_request to false
   ]);
+  await prisma.conversation.updateMany({
+    where: {
+      type: "DIRECT",
+      is_request: true,
+      AND: [
+        { participants: { some: { user_id: senderId } } },
+        { participants: { some: { user_id: receiverId } } },
+      ],
+    },
+    data: { is_request: false },
+  });
 
   return connection;
 };

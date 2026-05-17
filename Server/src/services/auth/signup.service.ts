@@ -1,7 +1,7 @@
-import { prisma } from "../../lib/prisma.lib";
-import type { SendOtpInput } from "../../types/auth.type";
-import { generateOTP } from "../../utils/otp.util";
-import { generateMagicToken } from "../email/magicLink.service";
+import { prisma } from "../../lib/prisma.lib.js";
+import type { SendOtpInput } from "../../types/auth.type.js";
+import { generateOTP } from "../../utils/otp.util.js";
+import { generateMagicToken } from "../email/magicLink.service.js";
 
 export const signUpUser = async (data: SendOtpInput) => {
   const { otp, expiresAt, hashedOtp } = generateOTP();

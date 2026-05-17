@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.lib.js";
+import { resolveUserId } from "../../utils/resolveUser.js";
 
 type BlockUserData = {
   blockerId: string;
@@ -6,7 +7,8 @@ type BlockUserData = {
 };
 
 export const blockUser = async (data: BlockUserData) => {
-  const { blockerId, blockedId } = data;
+  const blockerId = await resolveUserId(data.blockerId);
+  const blockedId = await resolveUserId(data.blockedId);
 
   if (blockerId === blockedId) throw new Error("Invalid request");
 

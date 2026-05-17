@@ -7,8 +7,14 @@ import { otpPerDayLimiter, otpPerHourLimiter, otpPerMinuteLimiter, otpVerifyLimi
 import { validate } from "../middlewares/validations/inputValidate.middleware.js";
 import { completeRegistrationSchema, resetPasswordSchema, sendOtpSchema, signInSchema, verifyOtpSchema } from "../types/auth.type.js";
 import { verifyMagicLink } from "../controllers/email/magicLink.controller.js";
+import { authenticate } from "../middlewares/auth/auth.middleware.js";
 
 const router = Router();
+
+router.get("/token", authenticate, (req, res) => {
+  const token = req.cookies.token;
+  res.json({ success: true, data: { token } });
+});
 
 /* SignUp */
 router.post("/send-otp", validate(sendOtpSchema), otpPerMinuteLimiter, otpPerHourLimiter, otpPerDayLimiter, send);

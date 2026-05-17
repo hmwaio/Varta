@@ -33,7 +33,7 @@ export const getConnections = async (data: GetConnectionsData) => {
     },
   });
 
-  return connection.map((c) =>
+  return connection.map((c: any) =>
     c.sender_id === userId ? c.receiver : c.sender,
   );
 };
